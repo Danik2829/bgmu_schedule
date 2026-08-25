@@ -15,25 +15,27 @@
 <body>
   <main class="app">
     <header class="header">
-      <div>
-        <h1>Расписание</h1>
-        <div id="group" class="group"></div>
-      </div>
-      <div id="todayBadge" class="today-badge">Сегодня</div>
-    </header>
 
-    <section class="date-navigation" aria-label="Навигация по дням">
-      <button id="previousDay" class="nav-button" aria-label="Предыдущий день">‹</button>
-      <button id="dateButton" class="date-center" aria-label="Вернуться к сегодняшнему дню">
-        <div id="dayName"></div>
-        <div id="date"></div>
-      </button>
-      <button id="nextDay" class="nav-button" aria-label="Следующий день">›</button>
-    </section>
+  <div>
+    <h1>Расписание</h1>
 
-    <button id="todayButton" class="today-button">Сегодня</button>
+    <div id="group" class="group"></div>
+  </div>
 
-    <section id="schedule" class="schedule" aria-live="polite"></section>
+  <button
+    id="todayButton"
+    class="today-button hidden"
+  >
+    Сегодня
+  </button>
+
+</header>
+
+<section
+  id="schedule"
+  class="schedule"
+  aria-live="polite"
+></section>
   </main>
 
   <script src="app.js"></script>
