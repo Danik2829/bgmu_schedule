@@ -27,70 +27,117 @@ const monthNames = [
   "декабря"
 ];
 
-const els = {
-  group: document.getElementById("group"),
-  schedule: document.getElementById("schedule"),
-  todayButton: document.getElementById("todayButton")
-};
+
+const groupElement =
+  document.getElementById("group");
+
+const scheduleElement =
+  document.getElementById("schedule");
+
+const todayButton =
+  document.getElementById("todayButton");
+
+
+// ------------------------------------
+// ДАТЫ
+// ------------------------------------
 
 function startOfDay(date) {
+
   return new Date(
     date.getFullYear(),
     date.getMonth(),
     date.getDate()
   );
+
 }
 
+
 function addDays(date, amount) {
+
   return new Date(
     date.getFullYear(),
     date.getMonth(),
     date.getDate() + amount
   );
+
 }
 
-function formatISO(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+
+function formatDate(date) {
+
+  const year =
+    date.getFullYear();
+
+  const month =
+    String(date.getMonth() + 1)
+      .padStart(2, "0");
+
+  const day =
+    String(date.getDate())
+      .padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+
 }
+
 
 function isToday(date) {
-  return formatISO(date) === formatISO(today);
+
+  return (
+    formatDate(date) ===
+    formatDate(today)
+  );
+
 }
+
+
+// ------------------------------------
+// БЕЗОПАСНЫЙ ТЕКСТ
+// ------------------------------------
 
 function escapeHtml(value) {
-  const div = document.createElement("div");
 
-  div.textContent = value ?? "";
+  const div =
+    document.createElement("div");
+
+  div.textContent =
+    value ?? "";
 
   return div.innerHTML;
+
 }
 
-/*
- * Создаёт один день расписания
- */
-function renderDay(date) {
 
-  const dateString = formatISO(date);
+// ------------------------------------
+// СОЗДАНИЕ ОДНОГО ДНЯ
+// ------------------------------------
 
-  const lessons = schedule
-    .filter(item => item.date === dateString)
-    .sort((a, b) =>
-      String(a.start).localeCompare(String(b.start))
-    );
+function createDay(date) {
 
-  const todayClass = isToday(date)
-    ? "day today"
-    : "day";
+  const dateString =
+    formatDate(date);
 
-  const todayBadge = isToday(date)
-    ? `<div class="today-badge">Сегодня</div>`
-    : "";
+
+  const lessons =
+    schedule
+      .filter(item =>
+        item.date === dateString
+      )
+      .sort((a, b) =>
+        String(a.start)
+          .localeCompare(
+            String(b.start)
+          )
+      );
+
+
+  const today =
+    isToday(date);
+
 
   let lessonsHTML = "";
+
 
   if (lessons.length === 0) {
 
@@ -102,32 +149,43 @@ function renderDay(date) {
 
   } else {
 
-    lessonsHTML = lessons.map(item => `
-      <article class="lesson">
+    lessonsHTML =
+      lessons
+        .map(item => {
 
-        <div class="lesson-time">
-          ${escapeHtml(item.start)}<br>
-          ${escapeHtml(item.end)}
-        </div>
+          return `
+            <article class="lesson">
 
-        <div class="lesson-subject">
-          ${escapeHtml(item.subject)}
-        </div>
+              <div class="lesson-time">
+                ${escapeHtml(item.start)}
+                <span>—</span>
+                ${escapeHtml(item.end)}
+              </div>
 
-      </article>
-    `).join("");
+              <div class="lesson-subject">
+                ${escapeHtml(item.subject)}
+              </div>
+
+            </article>
+          `;
+
+        })
+        .join("");
 
   }
 
+
   return `
+
     <section
-      class="${todayClass}"
+      class="day ${today ? "today" : ""}"
       data-date="${dateString}"
     >
 
       <div class="day-header">
 
         <div>
+
           <div class="day-name">
             ${dayNames[date.getDay()]}
           </div>
@@ -136,338 +194,542 @@ function renderDay(date) {
             ${date.getDate()}
             ${monthNames[date.getMonth()]}
           </div>
+
         </div>
 
-        ${todayBadge}
+
+        ${
+          today
+            ? `<div class="today-badge">
+                 Сегодня
+               </div>`
+            : ""
+        }
 
       </div>
 
+
       <div class="lessons">
+
         ${lessonsHTML}
+
       </div>
 
     </section>
+
   `;
+
 }
 
-/*
- * Первоначально показываем
- * неделю назад + две недели вперёд.
- */
-function renderInitialDays() {
+
+// ------------------------------------
+// ПЕРВОНАЧАЛЬНАЯ ЗАГРУЗКА
+// ------------------------------------
+
+function renderInitialSchedule() {
 
   let html = "";
 
-  const startDate = addDays(today, -7);
-  const endDate = addDays(today, 14);
 
-  let date = startDate;
+  /*
+   * Показываем:
+   *
+   * 7 дней назад
+   * +
+   * сегодня
+   * +
+   * 14 дней вперёд
+   */
+
+  let date =
+    addDays(today, -7);
+
+  const endDate =
+    addDays(today, 14);
+
 
   while (date <= endDate) {
 
-    html += renderDay(date);
+    html += createDay(date);
 
-    date = addDays(date, 1);
+    date =
+      addDays(date, 1);
+
   }
 
-  els.schedule.innerHTML = html;
 
-  scrollToToday(false);
+  scheduleElement.innerHTML =
+    html;
+
+
+  /*
+   * Если расписание начинается
+   * после сегодняшнего дня,
+   * сегодняшний пустой день всё
+   * равно остаётся в ленте.
+   */
+
 }
 
-/*
- * Добавляет следующие дни
- */
-function loadNextDays(amount = 14) {
 
-  const days = els.schedule.querySelectorAll(".day");
+// ------------------------------------
+// ДОБАВИТЬ ДНИ ВПЕРЁД
+// ------------------------------------
+
+function addFutureDays(count = 14) {
+
+  const days =
+    scheduleElement
+      .querySelectorAll(".day");
+
 
   if (!days.length) {
     return;
   }
 
-  const lastDay = days[days.length - 1];
 
-  let date = new Date(
-    `${lastDay.dataset.date}T00:00:00`
-  );
+  const last =
+    days[days.length - 1];
 
-  date = addDays(date, 1);
+
+  let date =
+    new Date(
+      last.dataset.date + "T00:00:00"
+    );
+
+
+  date =
+    addDays(date, 1);
+
 
   let html = "";
 
-  for (let i = 0; i < amount; i++) {
 
-    html += renderDay(date);
+  for (
+    let i = 0;
+    i < count;
+    i++
+  ) {
 
-    date = addDays(date, 1);
+    html += createDay(date);
+
+    date =
+      addDays(date, 1);
+
   }
 
-  els.schedule.insertAdjacentHTML(
+
+  scheduleElement.insertAdjacentHTML(
     "beforeend",
     html
   );
+
 }
 
-/*
- * Добавляет предыдущие дни.
- */
-function loadPreviousDays(amount = 14) {
 
-  const days = els.schedule.querySelectorAll(".day");
+// ------------------------------------
+// ДОБАВИТЬ ДНИ НАЗАД
+// ------------------------------------
+
+function addPreviousDays(count = 14) {
+
+  const days =
+    scheduleElement
+      .querySelectorAll(".day");
+
 
   if (!days.length) {
     return;
   }
 
-  const firstDay = days[0];
 
-  let date = new Date(
-    `${firstDay.dataset.date}T00:00:00`
-  );
+  const first =
+    days[0];
 
-  date = addDays(date, -amount);
+
+  let date =
+    new Date(
+      first.dataset.date + "T00:00:00"
+    );
+
+
+  date =
+    addDays(date, -count);
+
 
   let html = "";
 
-  for (let i = 0; i < amount; i++) {
 
-    html += renderDay(date);
+  for (
+    let i = 0;
+    i < count;
+    i++
+  ) {
 
-    date = addDays(date, 1);
+    html += createDay(date);
+
+    date =
+      addDays(date, 1);
+
   }
 
-  /*
-   * Сохраняем положение экрана,
-   * чтобы при добавлении дней сверху
-   * пользователя не телепортировало.
-   */
-  const oldHeight = els.schedule.scrollHeight;
 
-  els.schedule.insertAdjacentHTML(
+  /*
+   * Сохраняем положение экрана.
+   */
+
+  const oldHeight =
+    document.documentElement
+      .scrollHeight;
+
+
+  scheduleElement.insertAdjacentHTML(
     "afterbegin",
     html
   );
 
-  const newHeight = els.schedule.scrollHeight;
+
+  const newHeight =
+    document.documentElement
+      .scrollHeight;
+
 
   window.scrollBy(
     0,
     newHeight - oldHeight
   );
+
 }
 
-/*
- * Возвращение к сегодняшнему дню
- */
-function goToday() {
+
+// ------------------------------------
+// КНОПКА "СЕГОДНЯ"
+// ------------------------------------
+
+function goToToday() {
 
   const todayElement =
-    els.schedule.querySelector(".day.today");
+    scheduleElement
+      .querySelector(".today");
+
 
   if (!todayElement) {
     return;
   }
 
+
   todayElement.scrollIntoView({
     behavior: "smooth",
     block: "start"
   });
+
 }
 
-/*
- * Проверяем, достаточно ли далеко
- * пользователь прокрутил страницу.
- */
-let scrollTimeout = null;
+
+// ------------------------------------
+// ПОКАЗЫВАТЬ / СКРЫВАТЬ "СЕГОДНЯ"
+// ------------------------------------
+
+function updateTodayButton() {
+
+  const todayElement =
+    scheduleElement
+      .querySelector(".today");
+
+
+  if (!todayElement) {
+    return;
+  }
+
+
+  const rect =
+    todayElement
+      .getBoundingClientRect();
+
+
+  const visible =
+    rect.top <
+      window.innerHeight * 0.5
+    &&
+    rect.bottom >
+      window.innerHeight * 0.2;
+
+
+  todayButton.classList.toggle(
+    "hidden",
+    visible
+  );
+
+}
+
+
+// ------------------------------------
+// БЕСКОНЕЧНЫЙ СКРОЛЛ
+// ------------------------------------
+
+let loading = false;
+
 
 window.addEventListener(
   "scroll",
   () => {
 
-    if (scrollTimeout) {
+    if (loading) {
       return;
     }
 
-    scrollTimeout = setTimeout(() => {
 
-      const scrollTop = window.scrollY;
+    const scrollTop =
+      window.scrollY;
 
-      const windowBottom =
-        window.innerHeight + scrollTop;
 
-      const pageHeight =
-        document.documentElement.scrollHeight;
+    const screenBottom =
+      scrollTop +
+      window.innerHeight;
 
-      /*
-       * Почти дошли до конца —
-       * добавляем ещё 14 дней.
-       */
-      if (
-        windowBottom >
-        pageHeight - 1000
-      ) {
 
-        loadNextDays(14);
-      }
+    const pageHeight =
+      document.documentElement
+        .scrollHeight;
 
-      /*
-       * Почти дошли до начала —
-       * добавляем предыдущие 14 дней.
-       */
-      if (scrollTop < 800) {
 
-        const firstDay =
-          els.schedule.querySelector(".day");
+    /*
+     * Почти низ страницы.
+     */
 
-        if (firstDay) {
+    if (
+      screenBottom >
+      pageHeight - 1200
+    ) {
 
-          const firstDate =
-            new Date(
-              `${firstDay.dataset.date}T00:00:00`
-            );
+      loading = true;
 
-          /*
-           * Не даём бесконечно загружать
-           * слишком далёкое прошлое.
-           */
-          const minimumDate =
-            addDays(today, -365);
+      addFutureDays(14);
 
-          if (firstDate > minimumDate) {
+      setTimeout(() => {
+        loading = false;
+      }, 50);
 
-            loadPreviousDays(14);
-          }
+    }
+
+
+    /*
+     * Почти верх страницы.
+     */
+
+    if (
+      scrollTop < 600
+    ) {
+
+      const first =
+        scheduleElement
+          .querySelector(".day");
+
+
+      if (first) {
+
+        const firstDate =
+          new Date(
+            first.dataset.date +
+            "T00:00:00"
+          );
+
+
+        const minimumDate =
+          addDays(today, -365);
+
+
+        if (
+          firstDate >
+          minimumDate
+        ) {
+
+          loading = true;
+
+          addPreviousDays(14);
+
+          setTimeout(() => {
+            loading = false;
+          }, 50);
+
         }
+
       }
 
-      scrollTimeout = null;
-
-    }, 100);
-
-  },
-  {
-    passive: true
-  }
-);
-
-/*
- * Определяем текущий день,
- * когда пользователь листает страницу.
- *
- * Если сегодня ушли далеко —
- * появляется кнопка "Сегодня".
- */
-window.addEventListener(
-  "scroll",
-  () => {
-
-    const todayElement =
-      els.schedule.querySelector(".day.today");
-
-    if (!todayElement) {
-      return;
     }
 
-    const rect =
-      todayElement.getBoundingClientRect();
 
-    const isVisible =
-      rect.top < window.innerHeight * 0.45 &&
-      rect.bottom > window.innerHeight * 0.25;
+    updateTodayButton();
 
-    els.todayButton.classList.toggle(
-      "hidden",
-      isVisible
-    );
   },
   {
     passive: true
   }
 );
 
-els.todayButton.addEventListener(
+
+// ------------------------------------
+// КНОПКА
+// ------------------------------------
+
+todayButton.addEventListener(
   "click",
-  goToday
+  goToToday
 );
 
-/*
- * Загрузка расписания
- */
+
+// ------------------------------------
+// ЗАГРУЗКА JSON
+// ------------------------------------
+
 async function loadSchedule() {
 
   try {
 
-    const response = await fetch(
-      "data/schedule.json",
-      {
-        cache: "no-cache"
-      }
+    console.log(
+      "Загружаем расписание..."
     );
 
-    if (!response.ok) {
-      throw new Error(
-        "schedule.json not found"
+
+    const response =
+      await fetch(
+        "./data/schedule.json"
       );
+
+
+    console.log(
+      "Ответ сервера:",
+      response.status,
+      response.url
+    );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        `HTTP ${response.status}`
+      );
+
     }
+
 
     const data =
       await response.json();
 
-    schedule =
-      Array.isArray(data)
-        ? data
-        : data.lessons || [];
 
-    if (!Array.isArray(schedule)) {
+    console.log(
+      "JSON загружен:",
+      data
+    );
+
+
+    /*
+     * Поддерживаем оба варианта:
+     *
+     * {
+     *   "group": "8103",
+     *   "lessons": [...]
+     * }
+     *
+     * И просто [...]
+     */
+
+    if (
+      Array.isArray(data)
+    ) {
+
+      schedule = data;
+
+    } else {
+
+      schedule =
+        data.lessons || [];
+
+      if (data.group) {
+
+        groupElement.textContent =
+          `Группа ${data.group}`;
+
+      }
+
+    }
+
+
+    if (
+      !Array.isArray(schedule)
+    ) {
 
       throw new Error(
-        "Invalid schedule format"
+        "В JSON отсутствует массив lessons"
       );
+
     }
 
-    if (data.group) {
 
-      els.group.textContent =
-        `Группа ${data.group}`;
-    }
+    console.log(
+      `Загружено занятий: ${schedule.length}`
+    );
 
-    renderInitialDays();
+
+    renderInitialSchedule();
+
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "ОШИБКА:",
+      error
+    );
 
-    els.schedule.innerHTML = `
+
+    groupElement.textContent =
+      "Ошибка загрузки";
+
+
+    scheduleElement.innerHTML = `
+
       <div class="error">
 
-        Не удалось загрузить расписание.
+        <div class="error-title">
+          Не удалось загрузить расписание
+        </div>
 
-        <br><br>
+        <div class="error-text">
 
-        Проверьте файл
-        <b>data/schedule.json</b>.
+          ${escapeHtml(
+            error.message
+          )}
+
+        </div>
+
+        <div class="error-help">
+
+          Проверьте, что файл находится здесь:
+
+          <br><br>
+
+          <code>
+            data/schedule.json
+          </code>
+
+          <br><br>
+
+          Откройте консоль браузера
+          (F12 → Console) для подробностей.
+
+        </div>
 
       </div>
+
     `;
+
   }
+
 }
 
-/*
- * Service Worker
- */
-if ("serviceWorker" in navigator) {
 
-  window.addEventListener(
-    "load",
-    () => {
-
-      navigator.serviceWorker
-        .register("sw.js")
-        .catch(console.error);
-
-    }
-  );
-}
+// ------------------------------------
+// START
+// ------------------------------------
 
 loadSchedule();
