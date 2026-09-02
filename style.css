@@ -461,3 +461,231 @@ h1 {
   }
 
 }
+
+/* ====================================
+   ПАНЕЛЬ ПАРЫ
+==================================== */
+
+.lesson {
+  position: relative;
+  display: block;
+  padding: 15px 16px 13px;
+}
+
+
+/* Основная информация */
+
+.lesson-main {
+  display: grid;
+
+  grid-template-columns:
+    95px
+    1fr;
+
+  align-items: center;
+}
+
+
+.lesson-subject {
+  min-width: 0;
+}
+
+
+/* ====================================
+   ЭМОДЗИ + ОЦЕНКА
+==================================== */
+
+.lesson-tools {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  margin-top: 11px;
+
+  padding-top: 9px;
+
+  border-top:
+    1px solid #f0f0f2;
+}
+
+
+/* Эмодзи */
+
+.emoji-button {
+  width: 32px;
+  height: 32px;
+
+  padding: 0;
+
+  border: 0;
+
+  border-radius: 10px;
+
+  background: #f2f2f7;
+
+  font-size: 18px;
+
+  line-height: 32px;
+
+  text-align: center;
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color:
+    transparent;
+}
+
+
+.emoji-button:active {
+  transform: scale(.9);
+}
+
+
+/* ====================================
+   ЗВЁЗДЫ
+==================================== */
+
+.rating {
+  display: flex;
+
+  align-items: center;
+
+  gap: 1px;
+}
+
+
+.rating-star {
+  width: 25px;
+  height: 30px;
+
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #d1d1d6;
+
+  font-size: 20px;
+
+  line-height: 30px;
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color:
+    transparent;
+}
+
+
+.rating-star.active {
+  color: #111;
+}
+
+
+.rating-star:active {
+  transform: scale(.85);
+}
+
+
+/* ====================================
+   ВЫБОР ЭМОДЗИ
+==================================== */
+
+.emoji-picker {
+  position: absolute;
+
+  left: 14px;
+  bottom: 52px;
+
+  z-index: 50;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(5, 38px);
+
+  gap: 5px;
+
+  padding: 9px;
+
+  border-radius: 15px;
+
+  background: white;
+
+  box-shadow:
+    0 8px 30px
+    rgba(0, 0, 0, .15);
+
+  animation:
+    emojiIn .12s ease-out;
+}
+
+
+.emoji-option {
+  width: 38px;
+  height: 38px;
+
+  padding: 0;
+
+  border: 0;
+
+  border-radius: 10px;
+
+  background: #f2f2f7;
+
+  font-size: 20px;
+
+  cursor: pointer;
+}
+
+
+.emoji-option:active {
+  transform: scale(.88);
+}
+
+
+.emoji-clear {
+  color: #8e8e93;
+
+  font-size: 22px;
+}
+
+
+@keyframes emojiIn {
+
+  from {
+    opacity: 0;
+    transform:
+      translateY(5px)
+      scale(.96);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translateY(0)
+      scale(1);
+  }
+
+}
+
+
+/* ====================================
+   МАЛЕНЬКИЙ IPHONE
+==================================== */
+
+@media (max-width: 380px) {
+
+  .lesson-main {
+    grid-template-columns:
+      82px
+      1fr;
+  }
+
+  .rating-star {
+    width: 23px;
+  }
+
+}
