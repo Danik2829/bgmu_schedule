@@ -1,5 +1,6 @@
 let schedule = [];
 
+const FIRST_DATE = new Date(2026, 8, 1); // 1 сентября 2026
 const today = startOfDay(new Date());
 
 const dayNames = [
@@ -27,97 +28,180 @@ const monthNames = [
   "декабря"
 ];
 
+const groupElement = document.getElementById("group");
+const scheduleElement = document.getElementById("schedule");
+const todayButton = document.getElementById("todayButton");
 
-const groupElement =
-  document.getElementById("group");
-
-const scheduleElement =
-  document.getElementById("schedule");
-
-const todayButton =
-  document.getElementById("todayButton");
+let loading = false;
 
 
-// ------------------------------------
-// ДАТЫ
-// ------------------------------------
+/* ====================================
+   ДАТЫ
+==================================== */
 
 function startOfDay(date) {
-
   return new Date(
     date.getFullYear(),
     date.getMonth(),
     date.getDate()
   );
-
 }
 
 
 function addDays(date, amount) {
-
   return new Date(
     date.getFullYear(),
     date.getMonth(),
     date.getDate() + amount
   );
-
 }
 
 
 function formatDate(date) {
+  const year = date.getFullYear();
 
-  const year =
-    date.getFullYear();
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
 
-  const month =
-    String(date.getMonth() + 1)
-      .padStart(2, "0");
-
-  const day =
-    String(date.getDate())
-      .padStart(2, "0");
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
-
 }
 
 
 function isToday(date) {
-
-  return (
-    formatDate(date) ===
-    formatDate(today)
-  );
-
+  return formatDate(date) === formatDate(today);
 }
 
 
-// ------------------------------------
-// БЕЗОПАСНЫЙ ТЕКСТ
-// ------------------------------------
+/* ====================================
+   HTML
+==================================== */
 
 function escapeHtml(value) {
+  const div = document.createElement("div");
 
-  const div =
-    document.createElement("div");
-
-  div.textContent =
-    value ?? "";
+  div.textContent = value ?? "";
 
   return div.innerHTML;
-
 }
 
 
-// ------------------------------------
-// СОЗДАНИЕ ОДНОГО ДНЯ
-// ------------------------------------
+/* ====================================
+   СОХРАНЕНИЕ ЭМОДЗИ И ОЦЕНОК
+==================================== */
+
+function getLessonId(item) {
+  return `${item.date}_${item.start}_${item.subject}`;
+}
+
+
+function getLessonData(item) {
+  const id = getLessonId(item);
+
+  try {
+    return JSON.parse(
+      localStorage.getItem(`lesson_${id}`)
+    ) || {};
+  } catch {
+    return {};
+  }
+}
+
+
+function saveLessonData(item, data) {
+  const id = getLessonId(item);
+
+  localStorage.setItem(
+    `lesson_${id}`,
+    JSON.stringify(data)
+  );
+}
+
+
+/* ====================================
+   КАРТОЧКА ПАРЫ
+==================================== */
+
+function createLesson(item) {
+
+  const saved = getLessonData(item);
+
+  const emoji =
+    saved.emoji || "";
+
+  const rating =
+    saved.rating || 0;
+
+  const stars = [1, 2, 3, 4, 5]
+    .map(number => `
+      <button
+        class="rating-star ${
+          number <= rating ? "active" : ""
+        }"
+        data-rating="${number}"
+        aria-label="Оценка ${number}"
+      >
+        ★
+      </button>
+    `)
+    .join("");
+
+  return `
+    <article
+      class="lesson"
+      data-lesson-id="${escapeHtml(
+        getLessonId(item)
+      )}"
+    >
+
+      <div class="lesson-main">
+
+        <div class="lesson-time">
+          ${escapeHtml(item.start)}
+          <span>—</span>
+          ${escapeHtml(item.end)}
+        </div>
+
+        <div class="lesson-subject">
+          ${escapeHtml(item.subject)}
+        </div>
+
+      </div>
+
+
+      <div class="lesson-tools">
+
+        <button
+          class="emoji-button"
+          type="button"
+          aria-label="Поставить эмодзи"
+        >
+          ${emoji || "＋"}
+        </button>
+
+        <div class="rating">
+          ${stars}
+        </div>
+
+      </div>
+
+    </article>
+  `;
+}
+
+
+/* ====================================
+   СОЗДАНИЕ ДНЯ
+==================================== */
 
 function createDay(date) {
 
   const dateString =
     formatDate(date);
-
 
   const lessons =
     schedule
@@ -132,8 +216,10 @@ function createDay(date) {
       );
 
 
-  const today =
-    isToday(date);
+  const todayClass =
+    isToday(date)
+      ? " today"
+      : "";
 
 
   let lessonsHTML = "";
@@ -151,34 +237,15 @@ function createDay(date) {
 
     lessonsHTML =
       lessons
-        .map(item => {
-
-          return `
-            <article class="lesson">
-
-              <div class="lesson-time">
-                ${escapeHtml(item.start)}
-                <span>—</span>
-                ${escapeHtml(item.end)}
-              </div>
-
-              <div class="lesson-subject">
-                ${escapeHtml(item.subject)}
-              </div>
-
-            </article>
-          `;
-
-        })
+        .map(createLesson)
         .join("");
 
   }
 
 
   return `
-
     <section
-      class="day ${today ? "today" : ""}"
+      class="day${todayClass}"
       data-date="${dateString}"
     >
 
@@ -197,12 +264,13 @@ function createDay(date) {
 
         </div>
 
-
         ${
-          today
-            ? `<div class="today-badge">
-                 Сегодня
-               </div>`
+          isToday(date)
+            ? `
+              <div class="today-badge">
+                Сегодня
+              </div>
+            `
             : ""
         }
 
@@ -210,77 +278,116 @@ function createDay(date) {
 
 
       <div class="lessons">
-
         ${lessonsHTML}
-
       </div>
 
     </section>
-
   `;
-
 }
 
 
-// ------------------------------------
-// ПЕРВОНАЧАЛЬНАЯ ЗАГРУЗКА
-// ------------------------------------
+/* ====================================
+   НАЧАЛЬНАЯ ЗАГРУЗКА
+==================================== */
 
 function renderInitialSchedule() {
 
   let html = "";
 
-
   /*
-   * Показываем:
+   * ВСЕГДА начинаем с 1 сентября.
    *
-   * 7 дней назад
-   * +
-   * сегодня
-   * +
-   * 14 дней вперёд
+   * Если сегодня 2 сентября:
+   * 1 сентября
+   * 2 сентября ← сюда прокрутимся
+   * 3 сентября
+   * ...
    */
 
   let date =
-    addDays(today, -7);
-
-  const endDate =
-    addDays(today, 14);
-
-
-  while (date <= endDate) {
-
-    html += createDay(date);
-
-    date =
-      addDays(date, 1);
-
-  }
-
-
-  scheduleElement.innerHTML =
-    html;
+    new Date(FIRST_DATE);
 
 
   /*
-   * Если расписание начинается
-   * после сегодняшнего дня,
-   * сегодняшний пустой день всё
-   * равно остаётся в ленте.
+   * Сразу показываем первый месяц.
+   * Потом остальные дни будут
+   * добавляться автоматически.
    */
 
+  const initialEnd =
+    addDays(today, 14);
+
+
+  while (date <= initialEnd) {
+
+    html += createDay(date);
+
+    date = addDays(date, 1);
+  }
+
+
+  scheduleElement.innerHTML = html;
+
+
+  /*
+   * После отрисовки прокручиваем
+   * именно к сегодняшнему дню.
+   */
+
+  setTimeout(() => {
+
+    const todayElement =
+      scheduleElement.querySelector(
+        ".today"
+      );
+
+    if (todayElement) {
+
+      todayElement.scrollIntoView({
+        behavior: "instant",
+        block: "start"
+      });
+
+    } else {
+
+      /*
+       * Если расписание почему-то
+       * ещё не началось — показываем
+       * 1 сентября.
+       */
+
+      const first =
+        scheduleElement.querySelector(
+          ".day"
+        );
+
+      if (first) {
+
+        first.scrollIntoView({
+          behavior: "instant",
+          block: "start"
+        });
+
+      }
+
+    }
+
+    updateTodayButton();
+
+  }, 50);
 }
 
 
-// ------------------------------------
-// ДОБАВИТЬ ДНИ ВПЕРЁД
-// ------------------------------------
+/* ====================================
+   ДОБАВЛЕНИЕ БУДУЩИХ ДНЕЙ
+==================================== */
 
 function addFutureDays(count = 14) {
 
   const days =
-    scheduleElement
-      .querySelectorAll(".day");
+    scheduleElement.querySelectorAll(
+      ".day"
+    );
 
 
   if (!days.length) {
@@ -294,7 +401,8 @@ function addFutureDays(count = 14) {
 
   let date =
     new Date(
-      last.dataset.date + "T00:00:00"
+      last.dataset.date +
+      "T00:00:00"
     );
 
 
@@ -323,94 +431,19 @@ function addFutureDays(count = 14) {
     "beforeend",
     html
   );
-
 }
 
 
-// ------------------------------------
-// ДОБАВИТЬ ДНИ НАЗАД
-// ------------------------------------
-
-function addPreviousDays(count = 14) {
-
-  const days =
-    scheduleElement
-      .querySelectorAll(".day");
-
-
-  if (!days.length) {
-    return;
-  }
-
-
-  const first =
-    days[0];
-
-
-  let date =
-    new Date(
-      first.dataset.date + "T00:00:00"
-    );
-
-
-  date =
-    addDays(date, -count);
-
-
-  let html = "";
-
-
-  for (
-    let i = 0;
-    i < count;
-    i++
-  ) {
-
-    html += createDay(date);
-
-    date =
-      addDays(date, 1);
-
-  }
-
-
-  /*
-   * Сохраняем положение экрана.
-   */
-
-  const oldHeight =
-    document.documentElement
-      .scrollHeight;
-
-
-  scheduleElement.insertAdjacentHTML(
-    "afterbegin",
-    html
-  );
-
-
-  const newHeight =
-    document.documentElement
-      .scrollHeight;
-
-
-  window.scrollBy(
-    0,
-    newHeight - oldHeight
-  );
-
-}
-
-
-// ------------------------------------
-// КНОПКА "СЕГОДНЯ"
-// ------------------------------------
+/* ====================================
+   КНОПКА "СЕГОДНЯ"
+==================================== */
 
 function goToToday() {
 
   const todayElement =
-    scheduleElement
-      .querySelector(".today");
+    scheduleElement.querySelector(
+      ".today"
+    );
 
 
   if (!todayElement) {
@@ -426,15 +459,16 @@ function goToToday() {
 }
 
 
-// ------------------------------------
-// ПОКАЗЫВАТЬ / СКРЫВАТЬ "СЕГОДНЯ"
-// ------------------------------------
+/* ====================================
+   ПОКАЗ КНОПКИ "СЕГОДНЯ"
+==================================== */
 
 function updateTodayButton() {
 
   const todayElement =
-    scheduleElement
-      .querySelector(".today");
+    scheduleElement.querySelector(
+      ".today"
+    );
 
 
   if (!todayElement) {
@@ -443,8 +477,7 @@ function updateTodayButton() {
 
 
   const rect =
-    todayElement
-      .getBoundingClientRect();
+    todayElement.getBoundingClientRect();
 
 
   const visible =
@@ -463,12 +496,280 @@ function updateTodayButton() {
 }
 
 
-// ------------------------------------
-// БЕСКОНЕЧНЫЙ СКРОЛЛ
-// ------------------------------------
+/* ====================================
+   ЭМОДЗИ
+==================================== */
 
-let loading = false;
+const emojiList = [
+  "😀",
+  "😎",
+  "🔥",
+  "❤️",
+  "👍",
+  "👎",
+  "😴",
+  "🤯",
+  "💀",
+  "😭",
+  "🤓",
+  "💪",
+  "🎯",
+  "⭐",
+  "❌"
+];
 
+
+function showEmojiPicker(item, button) {
+
+  /*
+   * Если уже открыт —
+   * закрываем.
+   */
+
+  const old =
+    document.querySelector(
+      ".emoji-picker"
+    );
+
+  if (old) {
+    old.remove();
+  }
+
+
+  const picker =
+    document.createElement("div");
+
+  picker.className =
+    "emoji-picker";
+
+
+  picker.innerHTML =
+    emojiList
+      .map(emoji => `
+        <button
+          type="button"
+          class="emoji-option"
+          data-emoji="${emoji}"
+        >
+          ${emoji}
+        </button>
+      `)
+      .join("")
+    +
+    `
+      <button
+        type="button"
+        class="emoji-option emoji-clear"
+        data-emoji=""
+      >
+        ×
+      </button>
+    `;
+
+
+  button.parentElement.appendChild(
+    picker
+  );
+
+
+  picker.addEventListener(
+    "click",
+    event => {
+
+      const option =
+        event.target.closest(
+          ".emoji-option"
+        );
+
+      if (!option) {
+        return;
+      }
+
+
+      const emoji =
+        option.dataset.emoji;
+
+
+      const saved =
+        getLessonData(item);
+
+
+      saved.emoji =
+        emoji;
+
+
+      saveLessonData(
+        item,
+        saved
+      );
+
+
+      button.textContent =
+        emoji || "＋";
+
+
+      picker.remove();
+
+    }
+  );
+}
+
+
+/* ====================================
+   КЛИКИ ПО ПАРАМ
+==================================== */
+
+scheduleElement.addEventListener(
+  "click",
+  event => {
+
+    const lesson =
+      event.target.closest(
+        ".lesson"
+      );
+
+
+    if (!lesson) {
+      return;
+    }
+
+
+    const lessonId =
+      lesson.dataset.lessonId;
+
+
+    const item =
+      schedule.find(
+        item =>
+          getLessonId(item) ===
+          lessonId
+      );
+
+
+    if (!item) {
+      return;
+    }
+
+
+    /*
+     * Эмодзи
+     */
+
+    const emojiButton =
+      event.target.closest(
+        ".emoji-button"
+      );
+
+
+    if (emojiButton) {
+
+      showEmojiPicker(
+        item,
+        emojiButton
+      );
+
+      return;
+    }
+
+
+    /*
+     * Оценка
+     */
+
+    const ratingButton =
+      event.target.closest(
+        ".rating-star"
+      );
+
+
+    if (ratingButton) {
+
+      const rating =
+        Number(
+          ratingButton.dataset.rating
+        );
+
+
+      const saved =
+        getLessonData(item);
+
+
+      /*
+       * Повторное нажатие
+       * убирает оценку.
+       */
+
+      saved.rating =
+        saved.rating === rating
+          ? 0
+          : rating;
+
+
+      saveLessonData(
+        item,
+        saved
+      );
+
+
+      const stars =
+        lesson.querySelectorAll(
+          ".rating-star"
+        );
+
+
+      stars.forEach(star => {
+
+        star.classList.toggle(
+          "active",
+          Number(
+            star.dataset.rating
+          ) <= saved.rating
+        );
+
+      });
+
+    }
+
+  }
+);
+
+
+/* ====================================
+   КЛИК ВНЕ ЭМОДЗИ
+==================================== */
+
+document.addEventListener(
+  "click",
+  event => {
+
+    if (
+      !event.target.closest(
+        ".emoji-button"
+      )
+      &&
+      !event.target.closest(
+        ".emoji-picker"
+      )
+    ) {
+
+      const picker =
+        document.querySelector(
+          ".emoji-picker"
+        );
+
+      if (picker) {
+        picker.remove();
+      }
+
+    }
+
+  }
+);
+
+
+/* ====================================
+   БЕСКОНЕЧНЫЙ СКРОЛЛ ВНИЗ
+==================================== */
 
 window.addEventListener(
   "scroll",
@@ -494,7 +795,8 @@ window.addEventListener(
 
 
     /*
-     * Почти низ страницы.
+     * Загружаем следующие 14 дней,
+     * когда пользователь близко к низу.
      */
 
     if (
@@ -506,55 +808,10 @@ window.addEventListener(
 
       addFutureDays(14);
 
+
       setTimeout(() => {
         loading = false;
-      }, 50);
-
-    }
-
-
-    /*
-     * Почти верх страницы.
-     */
-
-    if (
-      scrollTop < 600
-    ) {
-
-      const first =
-        scheduleElement
-          .querySelector(".day");
-
-
-      if (first) {
-
-        const firstDate =
-          new Date(
-            first.dataset.date +
-            "T00:00:00"
-          );
-
-
-        const minimumDate =
-          addDays(today, -365);
-
-
-        if (
-          firstDate >
-          minimumDate
-        ) {
-
-          loading = true;
-
-          addPreviousDays(14);
-
-          setTimeout(() => {
-            loading = false;
-          }, 50);
-
-        }
-
-      }
+      }, 100);
 
     }
 
@@ -568,9 +825,9 @@ window.addEventListener(
 );
 
 
-// ------------------------------------
-// КНОПКА
-// ------------------------------------
+/* ====================================
+   КНОПКА
+==================================== */
 
 todayButton.addEventListener(
   "click",
@@ -578,9 +835,9 @@ todayButton.addEventListener(
 );
 
 
-// ------------------------------------
-// ЗАГРУЗКА JSON
-// ------------------------------------
+/* ====================================
+   ЗАГРУЗКА JSON
+==================================== */
 
 async function loadSchedule() {
 
@@ -597,13 +854,6 @@ async function loadSchedule() {
       );
 
 
-    console.log(
-      "Ответ сервера:",
-      response.status,
-      response.url
-    );
-
-
     if (!response.ok) {
 
       throw new Error(
@@ -617,23 +867,6 @@ async function loadSchedule() {
       await response.json();
 
 
-    console.log(
-      "JSON загружен:",
-      data
-    );
-
-
-    /*
-     * Поддерживаем оба варианта:
-     *
-     * {
-     *   "group": "8103",
-     *   "lessons": [...]
-     * }
-     *
-     * И просто [...]
-     */
-
     if (
       Array.isArray(data)
     ) {
@@ -644,6 +877,7 @@ async function loadSchedule() {
 
       schedule =
         data.lessons || [];
+
 
       if (data.group) {
 
@@ -666,13 +900,24 @@ async function loadSchedule() {
     }
 
 
+    /*
+     * Дополнительная проверка:
+     * убираем всё, что раньше 1 сентября.
+     */
+
+    schedule =
+      schedule.filter(item =>
+        item.date >=
+        formatDate(FIRST_DATE)
+      );
+
+
     console.log(
       `Загружено занятий: ${schedule.length}`
     );
 
 
     renderInitialSchedule();
-
 
   } catch (error) {
 
@@ -695,16 +940,14 @@ async function loadSchedule() {
         </div>
 
         <div class="error-text">
-
           ${escapeHtml(
             error.message
           )}
-
         </div>
 
         <div class="error-help">
 
-          Проверьте, что файл находится здесь:
+          Проверьте файл:
 
           <br><br>
 
@@ -714,8 +957,8 @@ async function loadSchedule() {
 
           <br><br>
 
-          Откройте консоль браузера
-          (F12 → Console) для подробностей.
+          Откройте F12 → Console,
+          чтобы посмотреть ошибку.
 
         </div>
 
@@ -728,8 +971,26 @@ async function loadSchedule() {
 }
 
 
-// ------------------------------------
-// START
-// ------------------------------------
+/* ====================================
+   SERVICE WORKER
+==================================== */
+
+if (
+  "serviceWorker" in navigator
+) {
+
+  window.addEventListener(
+    "load",
+    () => {
+
+      navigator.serviceWorker
+        .register("sw.js")
+        .catch(console.error);
+
+    }
+  );
+
+}
+
 
 loadSchedule();
