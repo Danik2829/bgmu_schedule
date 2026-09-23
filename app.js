@@ -136,6 +136,9 @@ function createLesson(item) {
   const rating =
     saved.rating || 0;
 
+  const comment =
+  saved.comment || "";
+
   const stars = [1, 2, 3, 4, 5]
     .map(number => `
       <button
@@ -151,46 +154,57 @@ function createLesson(item) {
     .join("");
 
   return `
-    <article
-      class="lesson"
-      data-lesson-id="${escapeHtml(
-        getLessonId(item)
-      )}"
-    >
+  <article
+    class="lesson"
+    data-lesson-id="${escapeHtml(
+      getLessonId(item)
+    )}"
+  >
 
-      <div class="lesson-main">
+    <div class="lesson-main">
 
-        <div class="lesson-time">
-          ${escapeHtml(item.start)}
-          <span>—</span>
-          ${escapeHtml(item.end)}
-        </div>
-
-        <div class="lesson-subject">
-          ${escapeHtml(item.subject)}
-        </div>
-
+      <div class="lesson-time">
+        ${escapeHtml(item.start)}
+        <span>—</span>
+        ${escapeHtml(item.end)}
       </div>
 
-
-      <div class="lesson-tools">
-
-        <button
-          class="emoji-button"
-          type="button"
-          aria-label="Поставить эмодзи"
-        >
-          ${emoji || "＋"}
-        </button>
-
-        <div class="rating">
-          ${stars}
-        </div>
-
+      <div class="lesson-subject">
+        ${escapeHtml(item.subject)}
       </div>
 
-    </article>
-  `;
+    </div>
+
+
+    <div class="lesson-tools">
+
+      <button
+        class="emoji-button"
+        type="button"
+        aria-label="Поставить эмодзи"
+      >
+        ${emoji || "＋"}
+      </button>
+
+      <div class="rating">
+        ${stars}
+      </div>
+
+    </div>
+
+
+    <div class="lesson-comment">
+
+      <textarea
+        class="comment-input"
+        placeholder="Комментарий к паре..."
+        maxlength="500"
+      >${escapeHtml(comment)}</textarea>
+
+    </div>
+
+  </article>
+`;
 }
 
 
@@ -515,7 +529,21 @@ const emojiList = [
   "💪",
   "🎯",
   "⭐",
-  "❌"
+  "❌",
+  "😊",
+  "😍",
+  "🥰",
+  "🤨",
+  "🧐",
+  "😞",
+  "😕",
+  "😔",
+  "😪",
+  "😮‍💨",
+  "😵‍💫",
+  "🥱",
+  "😐"
+
 ];
 
 
@@ -992,5 +1020,63 @@ if (
 
 }
 
+/* ====================================
+   КОММЕНТАРИИ
+==================================== */
+
+scheduleElement.addEventListener(
+  "input",
+  event => {
+
+    const input =
+      event.target.closest(
+        ".comment-input"
+      );
+
+    if (!input) {
+      return;
+    }
+
+
+    const lesson =
+      input.closest(".lesson");
+
+    if (!lesson) {
+      return;
+    }
+
+
+    const lessonId =
+      lesson.dataset.lessonId;
+
+
+    const item =
+      schedule.find(
+        item =>
+          getLessonId(item) ===
+          lessonId
+      );
+
+
+    if (!item) {
+      return;
+    }
+
+
+    const saved =
+      getLessonData(item);
+
+
+    saved.comment =
+      input.value;
+
+
+    saveLessonData(
+      item,
+      saved
+    );
+
+  }
+);
 
 loadSchedule();
